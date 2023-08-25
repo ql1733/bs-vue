@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script type="module">
+     import {reactive, effect, ref } from "./src/reactivity/index.js"
+    //  const obj = reactive({a:1,b:2})
+    //  effect(() => {
+    //     console.log(obj.a)
+    //     app.innerHTML = obj.a + obj.b
+    //  })
+    //  setTimeout(() => {
+    //     obj.b = 4;
+    //  }, 1000)
+    let r = ref(10)
+    effect(() => {
+        app.innerHTML = r.value
+    })
+    setTimeout(() => {
+        r.value = 12
+    }, 1000)
+    </script>
+</body>
+</html>
