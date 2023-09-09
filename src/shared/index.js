@@ -27,3 +27,4 @@ export function hasOwn(target, key) {
 export function hasChange(o, n) {
     return o !== n;
 }
+export * from "./shapeFlag.js"

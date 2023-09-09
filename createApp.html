@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script type="module">
+     import { createApp } from "./src/runtime-dom/index.js";
+     import { h } from "./src/runtime-core/h.js";
+     import { reactive } from "./src/reactivity/index.js"
+     let App = {
+        setup(props, context){
+            let state = reactive({name: "zs"})
+            const fn = () => {
+                state.name = "ls"
+            }
+            return (proxy) => {
+                return h("div", { style: {color: "red"},  onClick: fn}, state.name)
+            }
+        },
+        // render(proxy) {
+        //     console.log(proxy)
+        // }
+     }
+     const app = createApp(App, {name: "zs"})
+     app.mount("#app")
+    </script>
+</body>
+</html>
