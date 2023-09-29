@@ -85,24 +85,130 @@ export function createRenderer(rendererOptions) {
             }
         }
     }
-    const patchChildren = (n1, n2, container) => {
+    const unmountChildren = (children) => {
+        for(let i = 0; i < children.length;i++) {
+            unmount(children[i]);
+        }
+    }
+    const patchKeyedChildren = (c1,c2,el) => {
+        let i = 0;
+        let e1 = c1.length -1;
+        let e2 = c2.length -1;
+        while(i<=e1 && i <= e2) {
+            let n1 = c1[i];
+            let n2 = c2[i];
+            if(isSameVNodeType(n1,n2)) {
+                patch(n1,n2, el);
+            } else {
+                break
+            }
+            i++;
+        }
+        while(i<=e1 && i <= e2) {
+            let n1 = c1[e1];
+            let n2 = c2[e2];
+            if(isSameVNodeType(n1,n2)) {
+                patch(n1,n2, el);
+            } else {
+                break
+            }
+            e1--;
+            e2--;
+        }
+        if(i>e1) {
+            if(i<e2) {
+                let nextPos = e2 +1;
+                let anchor = nextPos < c2.length ? c2[nextPos].el: null
+                while(i<=e2) {
+                    patch(null, c2[i], el,anchor);
+                    i++;
+                }
+            }
+        } else if(i>e2) {
+            while(i<=e1) {
+                unmount(c[i]);
+                i++;
+            }
+        } else {
+            let  s1 = i;
+            let s2 = i;
+            const keyToNewIndexMap = new Map();
+            for(let i = s2;i<=e2;i++) {
+                let childVNode = c2[i];
+                keyToNewIndexMap.set(childVNode.key, i)
+            }
+            let toBePatched = e2-s2 +1;
+            let newIndexToOldIndexMap = new Array(toBePatched).fill(0);
+
+            for(let  i = s1; i<=e1;i++) {
+                let oldVNode = c1[i];
+                let newIndex = keyToNewIndexMap.get(oldVNode.key);
+                if (newIndex === undefined) {
+                    unmount(oldVNode);
+                }else {
+                    newIndexToOldIndexMap[newIndex - s2] = i+1;
+                    patch(oldVNode, c2[newIndex], el)
+                }
+            }
+            for(let i = toBePatched-1;i>=0;i--) {
+                let currentIndex = i + s2;
+                let child = c2[currentIndex];
+                let anchor = currentIndex + 1 < c2.length ? c2[currentIndex+1]: null
+                if(newIndexToOldIndexMap[i] == 0) {
+                    patch(null, child, el, anchor)
+                } else {
+                    hostInsert(child.el, el,anchor);
+                }
+            }
+        }
+    }
+    const patchChildren = (n1, n2, el) => {
         let c1 = n1.children;
         let c2 = n2.children;
+        let prevShapeFlag = n1.shapeFlag;
+        let shapeFlag = n2.shapeFlag;
+        if(shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+            // 老的是n 个孩子， 新的是文本
+            if(prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+                unmountChildren(c1);
+            }
+            // 两个都是文本
+            if (c2 !== c1) {
+                hostSetElementText(el, c2);
+            }
+        } else {
+            // 现在1是元素 上次是文本或 数组
+            if(prevShapeFlag &ShapeFlags.ARRAY_CHILDREN) {
+                if(shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+                    patchKeyedChildren(c1,c2,el);
+                } else {
+                    unmountChildren(c1);
+                }
+            } else {
+                // 上次是文本
+                if(prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+                    hostSetElementText(el, "");
+                } 
+                if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+                    mountChildren(c2, el);
+                }
+            }
+        }
 
     }
-    const pathElement = (n1, n2, container) => {
+    const patchElement = (n1, n2, container) => {
         // 元素是相同节点
         let el = (n2.el = n1.el);
         let oldProps = n1.props || {};
         let newProps = n2.props || {};
         patchProps(oldProps, newProps, el);
-        patchChildren(n1, n2, container);
+        patchChildren(n1, n2, el);
     }
     const processElement = (n1, n2, container, anchor) => {
         if (n1 == null) {
             mountElement(n2, container, anchor);
         } else {
-            pathElement(n1,n2, container)
+            patchElement(n1,n2, container)
         }
     }
     const processText = (n1, n2, container) => {
